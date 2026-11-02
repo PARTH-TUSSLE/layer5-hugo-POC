@@ -1,56 +1,99 @@
-# layer5.io on Hugo — proof of concept
+# layer5.io on Hugo — Proof of Concept
 
-A working skeleton for **Phase 0** of the Gatsby → Hugo migration plan, plus the tooling for Phases 1, 4 and 5 so the team can start in parallel on day one.
+This repository is a proof of concept (POC) for migrating [layer5.io](https://layer5.io) from Gatsby to Hugo. The current Gatsby site build is resource-heavy, leading to high memory usage and slow CI build times; this Hugo version is being built in parallel to deliver near-instant builds. Parity with the current site comes first, with no redesign.
 
-```
-make serve         # full site, live reload, no "lite" mode
-make test          # 15 tests for the migration tooling (Node ≥ 18, nothing to install)
-make bench         # 1,210 synthetic pages / 17 collections → wall time + peak RAM
-make index         # build + Pagefind search index
-make verify-urls   # fail if any live Gatsby URL would 404
-```
-Needs **Hugo Extended** (CI pins 0.145.0). Node is used only for the tooling in `scripts/` and for Pagefind. The site itself builds without it.
+<!-- TODO: add link to main migration tracking epic -->
+> **Tracking Epic**: [TODO: add migration epic link] <!-- TODO: add epic link --> | **Community Chat**: [TODO: add Slack/forum channel link] <!-- TODO: add chat channel link -->
 
-## Verification status (read this first)
+## How the migration works
 
-| Piece | Status |
-|---|---|
-| `scripts/migrate-mdx.mjs` (MDX → shortcodes, front matter, reports) | **Run and tested**: 12 tests, idempotent, fence/inline-code safe |
-| `scripts/verify-urls.mjs` (sitemap parity + redirects) | **Run and tested**: 3 tests |
-| `scripts/generate-synthetic-content.mjs` | **Run**: produces 1,210 pages in 17 collections |
-| Browser JS (`main.js`, `topology.js`, `calendar.js`) | Syntax-checked only |
-| Hugo templates, shortcodes, `hugo.yaml`, `bench.sh`, CI | **Not built.** Hugo wasn't available where this was written. Templates were statically linted (balanced blocks, every referenced partial/shortcode exists) |
+- **Converting content**: An automated script converts legacy MDX content into standard Hugo Markdown with YAML front matter.
+- **Rebuilding components**: React and Gatsby components are ported to lightweight, reusable Hugo shortcodes.
+- **Protecting URLs**: A verification tool compares the live Gatsby sitemap against the new site to ensure zero 404s.
+- **Safe cutover**: The Gatsby site is kept operational as an immediate rollback target until the Hugo migration passes all checks.
 
-So: expect to spend the first ~15 minutes running `make serve` and fixing a typo or two in a template. **No performance number in this repo has been measured.** The dashboard's “Measured” column is empty on purpose until `make bench` has run on CI hardware. Quote measured numbers in the meeting, not the plan's targets.
+## Status
 
-## What's in the box
-
-| Plan reference | Where | Notes |
+| Piece | Status | Notes |
 |---|---|---|
-| §3 config, permalinks, taxonomies | `hugo.yaml` | `buildFuture: true` (events are future-dated; Hugo hides them otherwise), `unsafe` Goldmark for inline HTML |
-| §3 layouts / partials | `layouts/` | home, blog list+single (related posts, JSON-LD), integrations (filter), members, handbook (sidebar + TOC), migration dashboard |
-| WS1 shortcodes | `layouts/shortcodes/` | `button`, `cta-fullwidth`, `terminal` (copy), `accordion`, `card`, `topology`, `calendar` |
-| WS1 converter | `scripts/migrate-mdx.mjs` | Dry-run report lists **unknown components**, which is your real work queue |
-| WS2 theme | `partials/head.html` | Inline script sets theme before first paint: no flash, no hydration |
-| WS2 search | `partials/search-dialog.html`, `main.js` | Pagefind modal, `/` or ⌘K; degrades with a clear message if no index |
-| WS2 Cytoscape / FullCalendar | `static/js/*.js` | Pinned versions, loaded only when the hook exists *and* is on screen |
-| WS2 forms | `partials/newsletter.html` | HTML5 validation + `fetch`; demo mode until an endpoint is set in `hugo.yaml` |
-| WS3 images | `partials/responsive-image.html` | `<picture>`, WebP, srcset, no upscaling, width/height set; skips SVG/GIF |
-| WS4 redirects | `aliases:` + `layouts/index.redirects.txt` | Emits a Netlify/Cloudflare-style `_redirects` from every alias |
-| WS4 link safety | `verify-urls.mjs`, CI `lychee` step | |
-| §5 Phase 0 CI | `.github/workflows/hugo.yml` | Build, Pagefind, link check, benchmark, 10-minute tripwire |
-| §6 contribution model | `docs/` | Cheatsheet, 10 first issues with acceptance criteria, 8-minute demo script |
-| §6.3 burndown | `/migration/` | Reads `data/migration.json`; the converter's `--progress` flag updates it |
+| Site build | **Working** | Compiles clean HTML into `public/` with zero template errors. |
+| Tooling tests | **23 passed** | 23 of 23 unit tests pass (`make test`). |
+| Sample content | **Placeholder** | Minimal sample content to test components; real content will migrate from `layer5`. |
+| Netlify redirects | **Working** | Generates extensionless `public/_redirects` from page aliases. |
+| Performance benchmarks | **Informal** | Windows numbers are approximate Go memory; true peak RSS is only measured on Linux CI. |
 
-Sample content is placeholder (titles start with “Sample:”). Member roles come from the plan; bios are intentionally empty.
+> [!WARNING]
+> No performance figure in this repo should be treated as an official result yet. Plan targets (< 6 s, < 250 MB) are goals, not measurements.
+
+## Quick start
+
+### Prerequisites
+- **Hugo Extended**: CI pins `0.145.0`; verified locally with `v0.162.1+extended` (version pin is being reviewed).
+- **Node.js**: Version 18 or newer (used solely for tooling in `scripts/` and Pagefind).
+- **Make**: Standard command runner.
+*(Verified on Windows x64; native macOS and Linux environments are untested on this dev machine).*
+
+```bash
+make serve         # Start local dev server with live reload at http://localhost:1313/ (verified on Windows)
+make test          # Run all 23 migration tooling unit tests (verified on Windows)
+make build         # Compile minified production site to ./public (verified on Windows)
+make bench         # Run 1,210-page synthetic build benchmark (verified on Windows; approx Go memory)
+make index         # Build Pagefind search index (untested; requires network for npx on first run)
+make verify-urls   # Verify URL parity (untested; requires downloading .bench/gatsby-sitemap.xml)
+make migrate-dry SRC=../layer5/src/collections # Dry-run MDX converter (untested without layer5 clone)
+```
+
+## How to contribute
+
+1. **Find or claim an issue**: Look for issues labelled `area/hugo-migration` in [layer5io/layer5 issues](https://github.com/layer5io/layer5/issues) and comment to claim one.
+2. **Fork and branch**: Fork this repository and create a descriptive feature branch.
+3. **Make your change**: Keep changes minimal. Run `make serve` to test locally and `make test` to ensure tooling passes.
+4. **Visual checks**: For any visual or layout changes, attach before/after screenshots in both light and dark mode.
+5. **Open a PR**: Open a pull request here referencing the issue (e.g., `Refs layer5io/layer5#123`). Sign off your commits (`git commit -s`); check CONTRIBUTING in `layer5io/layer5` for the current rules.
+6. **Review**: A maintainer will review your pull request.
+
+### Definition of Done for PRs
+- [ ] `make serve` runs without template or build errors.
+- [ ] `make test` passes (all 23 tests pass).
+- [ ] Verified in both light and dark theme modes.
+- [ ] URL parity is preserved (`make verify-urls` clean for touched collections).
+- [ ] [docs/CHEATSHEET.md](docs/CHEATSHEET.md) updated if shortcodes or attributes changed.
+
+## Repo map
+
+| Path | Description |
+|---|---|
+| `layouts/` | Hugo templates for home, sections, handbook, members, and partials. |
+| `layouts/shortcodes/` | Hugo shortcodes replacing React components (`button`, `terminal`, `accordion`, etc.). |
+| `assets/` | Site styling (CSS variables mapped to Sistent tokens) and client-side scripts (`main.js`). |
+| `static/js/` | Optional libraries (`topology.js`, `calendar.js`) loaded only on pages requiring them. |
+| `content/` | Sample content bundles (`blog/`, `handbook/`, `members/`, `integrations/`). |
+| `data/migration.json` | Migration metrics and collection counts displayed on `/migration/`. |
+| `scripts/` | Tooling: `migrate-mdx.mjs` (converter), `verify-urls.mjs` (URL checker), `bench.mjs` (benchmark). |
+| `docs/` | Contributor cheatsheet, starter issues, demo script, maintainer notes, and first-run report. |
+| `.github/workflows/` | CI workflow (`hugo.yml`) running builds, link checks, and Linux benchmarks. |
 
 ## Design notes
 
-- **Zero third-party requests on a normal page**: system fonts, no icon fonts, no analytics. CDN scripts load only for Cytoscape/FullCalendar pages.
-- CSS variables (`--accent`, `--bg`, …) are the seam for **Sistent tokens**: swap values, not selectors (see feedback note on Sistent in `docs/PLAN_FEEDBACK.md`).
-- Accessibility floor: skip link, visible focus, `prefers-reduced-motion`, `aria-pressed` on filters/theme toggle, `<noscript>` calendar fallback.
+- **Zero third-party requests on normal pages**: Uses system fonts, inline SVGs, and no tracking scripts.
+- **Token-based theme**: CSS variables provide dark/light modes and map cleanly to Sistent design tokens.
+- **Accessibility floor**: Visible focus states, keyboard navigation, skip links, and `prefers-reduced-motion` support.
 
-## Suggested next 48 hours
-1. `make serve`; fix whatever Hugo says. 2. `make bench` on the CI runner; paste real numbers into `data/migration.json`.
-3. Check out `layer5io/layer5` beside this repo → `make migrate-dry SRC=../layer5/src/collections` → turn each *unknown component* into an issue.
-4. Download the live sitemap → `make verify-urls`. 5. Open the epic and file `docs/GOOD_FIRST_ISSUES.md`.
+## Learn more
+
+- [docs/CHEATSHEET.md](docs/CHEATSHEET.md) — Go template syntax for React and Gatsby developers.
+- [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md) — 10 ready-to-claim starter issues with acceptance criteria.
+- [docs/FIRST_RUN_REPORT.md](docs/FIRST_RUN_REPORT.md) — Initial verification, bug fixes, and benchmark details.
+- [docs/MAINTAINER_NOTES.md](docs/MAINTAINER_NOTES.md) — Project lead handover notes and meeting recommendations.
+- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) — 8-minute demo walkthrough for the Websites Meeting.
+- [docs/PLAN_FEEDBACK.md](docs/PLAN_FEEDBACK.md) — Technical review and critique of the migration plan.
+- `/migration/` — Live migration burndown dashboard powered by `data/migration.json`.
+
+## Glossary
+
+- **Hugo**: A fast static site generator written in Go that compiles Markdown into HTML.
+- **Shortcode**: A reusable Hugo template tag (e.g. `{{< button >}}`) used inside Markdown.
+- **Front matter**: Metadata block at the top of a Markdown file (title, slug, date, aliases).
+- **Page bundle**: A directory containing an `index.md` file along with its co-located assets and images.
+- **MDX**: Markdown with embedded React components, used by the existing Gatsby site.
+- **Pagefind**: A lightweight client-side search library that indexes static HTML output.

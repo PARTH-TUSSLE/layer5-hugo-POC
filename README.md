@@ -79,13 +79,11 @@ make migrate-dry SRC=../layer5/src/collections # Dry-run MDX converter (untested
 - **Token-based theme**: CSS variables provide dark/light modes and map cleanly to Sistent design tokens.
 - **Accessibility floor**: Visible focus states, keyboard navigation, skip links, and `prefers-reduced-motion` support.
 
-## Learn more
+## Learn more (docs is yet to be pushed)
 
 - [docs/CHEATSHEET.md](docs/CHEATSHEET.md) — Go template syntax for React and Gatsby developers.
-- [docs/GOOD_FIRST_ISSUES.md](docs/GOOD_FIRST_ISSUES.md) — 10 ready-to-claim starter issues with acceptance criteria.
 - [docs/FIRST_RUN_REPORT.md](docs/FIRST_RUN_REPORT.md) — Initial verification, bug fixes, and benchmark details.
 - [docs/MAINTAINER_NOTES.md](docs/MAINTAINER_NOTES.md) — Project lead handover notes and meeting recommendations.
-- [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) — 8-minute demo walkthrough for the Websites Meeting.
 - [docs/PLAN_FEEDBACK.md](docs/PLAN_FEEDBACK.md) — Technical review and critique of the migration plan.
 - `/migration/` — Live migration burndown dashboard powered by `data/migration.json`.
 
